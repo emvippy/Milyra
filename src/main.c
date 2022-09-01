@@ -11,7 +11,10 @@ int main(int argc, const char* argv[])
 	// THIS IS THE MAIN LOOP!
 	while (!wm_pump(window))
 	{
-		printf("FRAME!\n");
+		//printf("FRAME!\n");
+		//get input
+		//physics
+		//render
 	}
 
 	wm_destroy(window);

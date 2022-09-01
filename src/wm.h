@@ -1,6 +1,6 @@
 #include <stdbool.h>
 
-typedef void wm_window_t;
+typedef wm_window_t;
 
 wm_window_t* wm_create();
 bool wm_pump(wm_window_t* window);
