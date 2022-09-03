@@ -9,12 +9,14 @@
 #include <windows.h>
 #include <windowsx.h>
 
+//mouse buttons defined
 enum {
 	k_mouse_button_left = 1 << 0,
 	k_mouse_button_right = 1 << 1,
 	k_mouse_button_middle = 1 << 2
 };
 
+//key buttons defined
 enum {
 	k_key_up = 1 << 0,
 	k_key_down = 1 << 1,
@@ -27,14 +29,18 @@ typedef struct wm_window_t {
 	bool quit;
 	bool has_focus;
 	uint32_t mouse_mask;
-	uint32_t key_mask
+	uint32_t key_mask;
+	int mouse_x;
+	int mouse_y
 };
 
+wm_window_t A_WINDOW;
+
+//struct for virtual keys
 const struct {
 	int virtual_key;
 	int ga_key;
-}
-k_key_map[] = {
+} k_key_map[] = {
 	{ .virtual_key = VK_LEFT, .ga_key = k_key_left },
 	{ .virtual_key = VK_RIGHT, .ga_key = k_key_right },
 	{ .virtual_key = VK_UP, .ga_key = k_key_up },
@@ -51,7 +57,6 @@ static LRESULT CALLBACK _window_proc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM
 				for (int i = 0; i < _countof(k_key_map); ++i) {
 					if (k_key_map[i].virtual_key == wParam) {
 						win->key_mask |= k_key_map[i].ga_key;
-						printf("mask=&x\n", win->key_mask);
 						break;
 					}
 				}
@@ -61,7 +66,6 @@ static LRESULT CALLBACK _window_proc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM
 				for (int i = 0; i < _countof(k_key_map); ++i) {
 					if (k_key_map[i].virtual_key == wParam) {
 						win->key_mask &= ~k_key_map[i].ga_key;
-						printf("mask=&x\n", win->key_mask);
 						break;
 					}
 				}
@@ -92,6 +96,11 @@ static LRESULT CALLBACK _window_proc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM
 			
 			case WM_MOUSEMOVE:
 				if (win->has_focus) {
+					//relative mouse movement
+					//1. get current pos (old_cursor)
+					//2. move mouse back to center
+					//3. get current pos (new_cursor)
+					//4. compute relative movement as old - new
 					POINT old_cursor;
 					GetCursorPos(&old_cursor);
 
@@ -102,6 +111,10 @@ static LRESULT CALLBACK _window_proc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM
 					
 					POINT new_cursor;
 					GetCursorPos(&new_cursor);
+
+					win->mouse_x = old_cursor.x - new_cursor.x;
+					win->mouse_y = old_cursor.y - new_cursor.y;
+
 				}
 				break;
 
@@ -156,9 +169,19 @@ wm_window_t* wm_create()
 	win->mouse_mask = 0;
 	win->quit = false;
 
-	SetWindowLongPtr(hwnd, GWLP_USERDATA, win);
+	SetWindowLongPtr(hwnd, GWLP_USERDATA, (LONG_PTR)win);
 
-	return (wm_window_t*)hwnd;
+	ShowWindow(hwnd, TRUE);
+
+	return win;
+}
+
+uint32_t wm_get_mouse_mask(wm_window_t* window) {
+	return window->mouse_mask;
+}
+
+uint32_t wm_get_key_mask(wm_window_t* window) {
+	return window->key_mask;
 }
 
 bool wm_pump(wm_window_t* window)
@@ -178,6 +201,11 @@ uint32_t wm_get_mouse_mask(wm_window_t* window) {
 
 uint32_t wm_get_key_mask(wm_window_t* window) {
 	return window->key_mask;
+}
+
+void wm_get_mouse_move(wm_window_t* window, int*x, int* y) {
+	*x = window->mouse_x;
+	*y = window->mouse_y;
 }
 
 void wm_destroy(wm_window_t* window)
