@@ -28,11 +28,12 @@ typedef struct wm_window_t {
 	HWND hwnd;
 	bool quit;
 	bool has_focus;
+	// char padding[2];
 	uint32_t mouse_mask;
 	uint32_t key_mask;
 	int mouse_x;
 	int mouse_y
-};
+}; //28 bytes
 
 wm_window_t A_WINDOW;
 
