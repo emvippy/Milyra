@@ -1,3 +1,7 @@
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#include <windowsx.h>
+
 #include <stdbool.h>
 #include <stdint.h>
 /*
@@ -10,11 +14,12 @@
 
 */
 
-typedef wm_window_t;
+typedef struct wm_window_t wm_window_t;
+typedef struct heap_t heap_t;
 
 //Create new window; destroyed with wm_destroy()
 //Failure: return null. Success: new window
-wm_window_t* wm_create();
+wm_window_t* wm_create(heap_t* heap);
 
 //Pump window messages; refresh mouse and key states
 bool wm_pump(wm_window_t* window);

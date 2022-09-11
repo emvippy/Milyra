@@ -1,13 +1,10 @@
 #include "wm.h"
+#include "heap.h"
 
 #include <stddef.h>
 #include <stdio.h>
-#include <stdint.h>
 #include <stdlib.h>
 
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>
-#include <windowsx.h>
 
 //mouse buttons defined
 enum {
@@ -26,14 +23,15 @@ enum {
 
 typedef struct wm_window_t {
 	HWND hwnd;
+	heap_t* heap;
 	bool quit;
 	bool has_focus;
 	// char padding[2];
 	uint32_t mouse_mask;
 	uint32_t key_mask;
 	int mouse_x;
-	int mouse_y
-}; //28 bytes
+	int mouse_y;
+} wm_window_t; //28 bytes
 
 wm_window_t A_WINDOW;
 
@@ -133,7 +131,7 @@ static LRESULT CALLBACK _window_proc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM
 	return DefWindowProc(hwnd, uMsg, wParam, lParam);
 }
 
-wm_window_t* wm_create()
+wm_window_t* wm_create(heap_t* heap)
 {
 	WNDCLASS wc =
 	{
@@ -161,28 +159,19 @@ wm_window_t* wm_create()
 		return NULL;
 	}
 
-	ShowWindow(hwnd, TRUE);
-
-	wm_window_t* win = malloc(sizeof(wm_window_t));
+	wm_window_t* win = heap_alloc(heap, sizeof(wm_window_t), 8);
 	win->has_focus = false;
 	win->hwnd = hwnd;
 	win->key_mask = 0;
 	win->mouse_mask = 0;
 	win->quit = false;
+	win->heap = heap;
 
 	SetWindowLongPtr(hwnd, GWLP_USERDATA, (LONG_PTR)win);
 
 	ShowWindow(hwnd, TRUE);
 
 	return win;
-}
-
-uint32_t wm_get_mouse_mask(wm_window_t* window) {
-	return window->mouse_mask;
-}
-
-uint32_t wm_get_key_mask(wm_window_t* window) {
-	return window->key_mask;
 }
 
 bool wm_pump(wm_window_t* window)
@@ -212,5 +201,5 @@ void wm_get_mouse_move(wm_window_t* window, int*x, int* y) {
 void wm_destroy(wm_window_t* window)
 {
 	DestroyWindow(window->hwnd);
-	free(window);
+	heap_free(window->heap, window);
 }
