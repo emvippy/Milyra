@@ -1,4 +1,6 @@
 #include "wm.h"
+
+#include "debug.h"
 #include "heap.h"
 
 #include <stddef.h>
@@ -26,14 +28,11 @@ typedef struct wm_window_t {
 	heap_t* heap;
 	bool quit;
 	bool has_focus;
-	// char padding[2];
 	uint32_t mouse_mask;
 	uint32_t key_mask;
 	int mouse_x;
 	int mouse_y;
-} wm_window_t; //28 bytes
-
-wm_window_t A_WINDOW;
+} wm_window_t;
 
 //struct for virtual keys
 const struct {
@@ -46,7 +45,8 @@ const struct {
 	{ .virtual_key = VK_DOWN, .ga_key = k_key_down }
 };
 
-static LRESULT CALLBACK _window_proc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+static LRESULT CALLBACK _window_proc(HWND hwnd, UINT uMsg, 
+									WPARAM wParam, LPARAM lParam)
 {
 	wm_window_t* win = (wm_window_t*)GetWindowLongPtr(hwnd, GWLP_USERDATA);
 	if (win) {
@@ -72,7 +72,8 @@ static LRESULT CALLBACK _window_proc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM
 
 			//Only for client area actions
 			case WM_LBUTTONDOWN:
-				//bitwise OR operation - same as win->mouse_mask = win->mouse_mask | k_mouse_button_left
+				//bitwise OR operation
+				//same as win->mouse_mask = win->mouse_mask | k_mouse_button_left
 				win->mouse_mask |= k_mouse_button_left;
 				break;
 			case WM_LBUTTONUP:
@@ -156,6 +157,7 @@ wm_window_t* wm_create(heap_t* heap)
 		NULL);
 
 	if (!hwnd) {
+		debug_print(k_print_warning, "Failed to create window!\n");
 		return NULL;
 	}
 
