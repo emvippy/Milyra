@@ -75,6 +75,14 @@ void heap_free(heap_t* heap, void* address)
 	tlsf_free(heap->tlsf, address);
 }
 
+void check_pool(void* ptr, size_t size, int used, void* user)
+{
+	if (used) {
+		//LEAK
+		debug_print(k_print_error, "Leaked %d bytes\n", size);
+	}
+}
+
 void heap_destroy(heap_t* heap)
 {
 	tlsf_destroy(heap->tlsf);
@@ -82,6 +90,9 @@ void heap_destroy(heap_t* heap)
 	arena_t* arena = heap->arena;
 	while (arena)
 	{
+		//Check then free
+		tlsf_walk_pool(arena->pool, check_pool, NULL);
+
 		arena_t* next = arena->next;
 		VirtualFree(arena, 0, MEM_RELEASE);
 		arena = next;
