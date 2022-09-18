@@ -8,6 +8,7 @@
 
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
+#include <DbgHelp.h>
 
 typedef struct arena_t
 {
@@ -21,6 +22,43 @@ typedef struct heap_t
 	size_t grow_increment;
 	arena_t* arena;
 } heap_t;
+
+typedef struct callstack_t
+{
+	int frames;
+	void* stack[10];
+} callstack_t;
+
+void bt_print(int frames, void** stack)
+{
+	int i;
+	//void* stack[10];
+	//unsigned short frames;
+	SYMBOL_INFO* symbol;
+	HANDLE process;
+
+	process = GetCurrentProcess();
+
+	SymInitialize(process, NULL, TRUE);
+
+	//frames = debug_backtrace(stack, 10);
+	symbol = (SYMBOL_INFO*)calloc(sizeof(SYMBOL_INFO) + 256 * sizeof(char), 1);
+	symbol->MaxNameLen = 255;
+	symbol->SizeOfStruct = sizeof(SYMBOL_INFO);
+
+	for (i = 0; i < frames; i++)
+	{
+		SymFromAddr(process, (DWORD64)(stack[i]), 0, symbol);
+
+		debug_print(k_print_error, "[%i] %s\n", i, symbol->Name);
+		if (strcmp(symbol->Name, "main") == 0) {
+			break;
+		}
+	}
+
+	free(symbol);
+	SymCleanup(process);
+}
 
 heap_t* heap_create(size_t grow_increment)
 {
@@ -43,7 +81,7 @@ heap_t* heap_create(size_t grow_increment)
 
 void* heap_alloc(heap_t* heap, size_t size, size_t alignment)
 {
-	void* address = tlsf_memalign(heap->tlsf, alignment, size);
+	void* address = tlsf_memalign(heap->tlsf, alignment, size + sizeof(callstack_t)); 
 	if (!address)
 	{
 		size_t arena_size =
@@ -65,7 +103,11 @@ void* heap_alloc(heap_t* heap, size_t size, size_t alignment)
 		arena->next = heap->arena;
 		heap->arena = arena;
 
-		address = tlsf_memalign(heap->tlsf, alignment, size);
+		address = tlsf_memalign(heap->tlsf, alignment, size + sizeof(callstack_t));
+	}
+	if (address) {
+		callstack_t* callstack = (callstack_t*)((char*)address + size);
+		callstack->frames = debug_backtrace(callstack->stack, 10);
 	}
 	return address;
 }
@@ -79,7 +121,11 @@ void check_pool(void* ptr, size_t size, int used, void* user)
 {
 	if (used) {
 		//LEAK
-		debug_print(k_print_error, "Leaked %d bytes\n", size);
+		debug_print(k_print_error, "Memory leak of size %d bytes with callstack:\n", (int)size);
+		//get callstack_t of ptr with pointer arithmetic
+		callstack_t* cs = (callstack_t*)((char*)ptr + size);
+		//use bt_print
+		bt_print(cs->frames, cs->stack);
 	}
 }
 

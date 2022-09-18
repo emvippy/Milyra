@@ -8,6 +8,9 @@
 // Handle to a heap.
 typedef struct heap_t heap_t;
 
+// Function to print out the current call stack.
+void bt_print(int frames, void** stack);
+
 // Creates a new memory heap.
 // The grow increment is the default size with which the heap grows.
 // Should be a multiple of OS page size.
