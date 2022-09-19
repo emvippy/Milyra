@@ -32,16 +32,12 @@ typedef struct callstack_t
 
 void bt_print(int frames, void** stack)
 {
-	//Initialize the symbol and process handle for the stack
-	SYMBOL_INFO* symbol;
-	HANDLE process;
-
 	// Get the process and initialize the system
-	process = GetCurrentProcess();
+	HANDLE process = GetCurrentProcess();
 	SymInitialize(process, NULL, TRUE);
 
 	// Set up the symbol needed for SymFromAddr
-	symbol = (SYMBOL_INFO*)calloc(sizeof(SYMBOL_INFO) + 256 * sizeof(char), 1);
+	SYMBOL_INFO* symbol = (SYMBOL_INFO*)calloc(sizeof(SYMBOL_INFO) + 256 * sizeof(char), 1);
 	symbol->MaxNameLen = 255;
 	symbol->SizeOfStruct = sizeof(SYMBOL_INFO);
 
