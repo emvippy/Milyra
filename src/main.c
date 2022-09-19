@@ -42,9 +42,6 @@ int main(int argc, const char* argv[])
 
 static void* homework1_allocate_1(heap_t* heap)
 {
-	/*void* s[10];
-	int f = debug_backtrace(s, 10);
-	bt_print(f, s);*/
 	return heap_alloc(heap, 16 * 1024, 8);
 }
 

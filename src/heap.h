@@ -1,4 +1,11 @@
 #include <stdlib.h>
+/*
+====    CODING STANDARD     ====
+1. Functions and variables should be named using snake_case (all words in lowercase, separated by underscores).
+2. Avoid win32 specific types in headers. Avoid "windows.h" in engine headers.
+3. Document all functions and types defined in engine headers.
+4. Avoid global and module-level variables.
+*/
 
 // Heap Memory Manager
 // 
@@ -9,6 +16,7 @@
 typedef struct heap_t heap_t;
 
 // Function to print out the current call stack.
+// Given the number of frames and the pointer to the stack information.
 void bt_print(int frames, void** stack);
 
 // Creates a new memory heap.
