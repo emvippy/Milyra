@@ -131,7 +131,8 @@ void lecture7_thread_test()
 
 typedef struct queue_t
 {
-	semaphore_t* count;
+	semaphore_t* used_items;
+	semaphore_t* free_items;
 	int items[QUEUE_MAX];
 	int head_index;
 	int tail_index;
@@ -140,12 +141,22 @@ typedef struct queue_t
 static void queue_push(queue_t* queue, int item)
 {
 	// IMPLEMENT ME!
+	semaphore_acquire(queue->free_items);
+	int index = atomic_increment(&queue->tail_index) % QUEUE_MAX;
+	queue->items[index] = item;
+	semaphore_release(queue->used_items);
+
+	// what if tail overtakes head?
 }
 
 static int queue_pop(queue_t* queue)
 {
 	// IMPLEMENT ME!
-	return -1;
+	semaphore_acquire(queue->used_items);
+	int index = atomic_increment(&queue->head_index) % QUEUE_MAX;
+	int item = queue->items[index];
+	semaphore_release(queue->free_items);
+	return item;
 }
 
 static int consumer_function(void* user)
@@ -166,7 +177,7 @@ void lecture7_queue_test()
 {
 	queue_t queue =
 	{
-		.count = semaphore_create(0, QUEUE_MAX),
+		.used_items = semaphore_create(0, QUEUE_MAX),
 	};
 
 	thread_t* consumer_thread = thread_create(consumer_function, &queue);
