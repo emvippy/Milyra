@@ -1,6 +1,7 @@
 #include "heap.h"
 
 #include "debug.h"
+#include "mutex.h"
 #include "tlsf/tlsf.h"
 
 #include <stddef.h>
@@ -21,6 +22,7 @@ typedef struct heap_t
 	tlsf_t tlsf;
 	size_t grow_increment;
 	arena_t* arena;
+	mutex_t* mutex;
 } heap_t;
 
 //Struct to store the number of frames and the pointer to a callstack
@@ -72,6 +74,7 @@ heap_t* heap_create(size_t grow_increment)
 		return NULL;
 	}
 
+	heap->mutex = mutex_create();
 	heap->grow_increment = grow_increment;
 	heap->tlsf = tlsf_create(heap + 1);
 	heap->arena = NULL;
@@ -81,8 +84,10 @@ heap_t* heap_create(size_t grow_increment)
 
 void* heap_alloc(heap_t* heap, size_t size, size_t alignment)
 {
+	mutex_lock(heap->mutex);
 	// Add more allocated memory for the callstack
 	void* address = tlsf_memalign(heap->tlsf, alignment, size + sizeof(callstack_t)); 
+
 	if (!address)
 	{
 		size_t arena_size =
@@ -113,12 +118,17 @@ void* heap_alloc(heap_t* heap, size_t size, size_t alignment)
 		callstack_t* callstack = (callstack_t*)((char*)address + size);
 		callstack->frames = debug_backtrace(callstack->stack, 10);
 	}
+
+	mutex_unlock(heap->mutex);
+
 	return address;
 }
 
 void heap_free(heap_t* heap, void* address)
 {
+	mutex_lock(heap->mutex);
 	tlsf_free(heap->tlsf, address);
+	mutex_unlock(heap->mutex);
 }
 
 void check_pool(void* ptr, size_t size, int used, void* user)
@@ -147,6 +157,8 @@ void heap_destroy(heap_t* heap)
 		VirtualFree(arena, 0, MEM_RELEASE);
 		arena = next;
 	}
+
+	mutex_destroy(heap->mutex);
 
 	VirtualFree(heap, 0, MEM_RELEASE);
 }
