@@ -1,4 +1,6 @@
 #include "fs.h"
+#include "lz4/lz4.h"
+#include "debug.h"
 
 #include "event.h"
 #include "heap.h"
@@ -13,8 +15,12 @@
 typedef struct fs_t
 {
 	heap_t* heap;
+	// Queue and thread used for file operations
 	queue_t* file_queue;
 	thread_t* file_thread;
+	// Queue and thread used for compression
+	queue_t* comp_queue;
+	thread_t* comp_thread;
 } fs_t;
 
 typedef enum fs_work_op_t
@@ -37,6 +43,7 @@ typedef struct fs_work_t
 } fs_work_t;
 
 static int file_thread_func(void* user);
+static int comp_thread_func(void* user);
 
 fs_t* fs_create(heap_t* heap, int queue_capacity)
 {
@@ -44,14 +51,19 @@ fs_t* fs_create(heap_t* heap, int queue_capacity)
 	fs->heap = heap;
 	fs->file_queue = queue_create(heap, queue_capacity);
 	fs->file_thread = thread_create(file_thread_func, fs);
+	fs->comp_queue = queue_create(heap, queue_capacity);
+	fs->comp_thread = thread_create(comp_thread_func, fs);
 	return fs;
 }
 
 void fs_destroy(fs_t* fs)
 {
 	queue_push(fs->file_queue, NULL);
+	queue_push(fs->comp_queue, NULL);
 	thread_destroy(fs->file_thread);
 	queue_destroy(fs->file_queue);
+	thread_destroy(fs->comp_thread);
+	queue_destroy(fs->comp_queue);
 	heap_free(fs->heap, fs);
 }
 
@@ -87,6 +99,8 @@ fs_work_t* fs_write(fs_t* fs, const char* path, const void* buffer, size_t size,
 	if (use_compression)
 	{
 		// HOMEWORK 2: Queue file write work on compression queue!
+
+		queue_push(fs->comp_queue, work);
 	}
 	else
 	{
@@ -133,11 +147,14 @@ void fs_work_destroy(fs_work_t* work)
 	{
 		event_wait(work->done);
 		event_destroy(work->done);
+		if (work->use_compression && (work->op == k_fs_work_op_write)) {
+			heap_free(work->heap, work->buffer);
+		}
 		heap_free(work->heap, work);
 	}
 }
 
-static void file_read(fs_work_t* work)
+static void file_read(fs_t* fs, fs_work_t* work)
 {
 	wchar_t wide_path[1024];
 	if (MultiByteToWideChar(CP_UTF8, 0, work->path, -1, wide_path, sizeof(wide_path)) <= 0)
@@ -181,7 +198,8 @@ static void file_read(fs_work_t* work)
 
 	if (work->use_compression)
 	{
-		// HOMEWORK 2: Queue file read work on decompression queue!
+		// HOMEWORK 2: Queue file read work on compression queue!
+		queue_push(fs->comp_queue, work);
 	}
 	else
 	{
@@ -231,14 +249,68 @@ static int file_thread_func(void* user)
 		{
 			break;
 		}
-		
+
 		switch (work->op)
 		{
 		case k_fs_work_op_read:
-			file_read(work);
+			file_read(fs, work);
 			break;
 		case k_fs_work_op_write:
 			file_write(work);
+			break;
+		}
+	}
+	return 0;
+}
+
+static int comp_thread_func(void* user)
+{
+	fs_t* fs = user;
+	while (true)
+	{
+		fs_work_t* work = queue_pop(fs->comp_queue);
+		if (work == NULL)
+		{
+			break;
+		}
+
+		int dst_buff_size;
+		char* dst_buff;
+
+		switch (work->op)
+		{
+		case k_fs_work_op_read:
+			//decompress data
+			//Copy the size data stored at the front of buffer into the new size
+			memcpy(&dst_buff_size, (int*)work->buffer, 1);
+			//Allocate a new buffer and decompress into it
+			dst_buff = heap_alloc(fs->heap, dst_buff_size, 8);
+			int decomp_size = LZ4_decompress_safe((char*)(work->buffer) + 4, dst_buff, (int)work->size - 4, dst_buff_size);
+			//Restore original size, free previous buffer, and write decompressed text to buffer
+			work->size = decomp_size;
+			heap_free(fs->heap, work->buffer);
+			work->buffer = dst_buff;
+			//If null terminate, add null terminate to the end of the text
+			if (work->null_terminate)
+			{
+				((char*)work->buffer)[work->size] = '\0';
+			}
+			//Signal the work is done for decompression reading
+			event_signal(work->done);
+			break;
+		case k_fs_work_op_write:
+			//compress data
+			//Get a size for the compressed text and allocate buffer to store the compressed text
+			dst_buff_size = LZ4_compressBound((int)work->size);
+			dst_buff = heap_alloc(fs->heap, (size_t)(dst_buff_size) + 4, 8);
+			//At the front of the buffer, store the original file size to be used in read
+			((size_t*)dst_buff)[0] = (char)work->size;
+			//Compress the work into the new buffer, store it and the compressed size into work
+			int comp_size = LZ4_compress_default(work->buffer, (char*)(dst_buff)+4, (int)work->size, dst_buff_size) + 4;
+			work->size = comp_size;
+			work->buffer = dst_buff;
+			//Add work to the file queue
+			queue_push(fs->file_queue, work);
 			break;
 		}
 	}
