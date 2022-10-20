@@ -22,3 +22,6 @@ void queue_push(queue_t* queue, void* item);
 // If the queue is empty, blocks until an item is avaiable.
 // Safe for multiple threads to pop at the same time.
 void* queue_pop(queue_t* queue);
+
+// Remove an item from the queue (FILO order).
+void* dequeue(queue_t* queue);
