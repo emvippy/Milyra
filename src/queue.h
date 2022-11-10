@@ -25,3 +25,7 @@ void* queue_pop(queue_t* queue);
 
 // Remove an item from the queue (FILO order).
 void* dequeue(queue_t* queue);
+// Pop an item off a queue (FIFO order).
+// If the queue is empty, returns NULL.
+// Safe for multiple threads to pop at the same time.
+void* queue_try_pop(queue_t* queue);
