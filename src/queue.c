@@ -1,6 +1,7 @@
 #include "atomic.h"
 #include "heap.h"
 #include "semaphore.h"
+#include <stdbool.h>
 
 typedef struct queue_t
 {
@@ -59,6 +60,7 @@ void* dequeue(queue_t* queue)
 	semaphore_release(queue->free_items);
 	return item;
 }
+
 bool queue_try_push(queue_t* queue, void* item)
 {
 	if (semaphore_try_acquire(queue->free_items))

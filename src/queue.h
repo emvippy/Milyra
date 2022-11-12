@@ -1,4 +1,5 @@
 #pragma once
+#include <stdbool.h>
 
 // Thread-safe Queue container
 
@@ -25,6 +26,7 @@ void* queue_pop(queue_t* queue);
 
 // Remove an item from the queue (FILO order).
 void* dequeue(queue_t* queue);
+
 // Push an item onto a queue if space is available.
 // If the queue is full, returns false.
 // Safe for multiple threads to push at the same time.
