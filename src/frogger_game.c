@@ -87,10 +87,36 @@ static void update_players(frogger_game_t* game);
 static void update_trucks(frogger_game_t* game);
 static void draw_models(frogger_game_t* game);
 
+//HELPER FUNCTIONS FOR MATH
 float float_rand(float min, float max)
 {
 	float scale = rand() / (float)RAND_MAX; /* [0, 1.0] */
 	return min + scale * (max - min);      /* [min, max] */
+}
+bool TestAABBCollision(transform_component_t* a, transform_component_t* b)
+{
+	// Since we're using 2D collision detection, only use yz coordinates
+	float a_max_y = a->transform.translation.y + (a->transform.scale.y);
+	float a_min_y = a->transform.translation.y - (a->transform.scale.y);
+	float b_max_y = b->transform.translation.y + (b->transform.scale.y);
+	float b_min_y = b->transform.translation.y - (b->transform.scale.y);
+	float a_max_z = a->transform.translation.z + (a->transform.scale.z);
+	float a_min_z = a->transform.translation.z - (a->transform.scale.z);
+	float b_max_z = b->transform.translation.z + (b->transform.scale.z);
+	float b_min_z = b->transform.translation.z - (b->transform.scale.z);
+
+	float d1x = b_min_y - a_max_y;
+	float d1y = b_min_z - a_max_z;
+	float d2x = a_min_y - b_max_y;
+	float d2y = a_min_z - b_max_z;
+
+	if (d1x > 0.0f || d1y > 0.0f)
+		return false;
+
+	if (d2x > 0.0f || d2y > 0.0f)
+		return false;
+
+	return true;
 }
 
 frogger_game_t* frogger_game_create(heap_t* heap, fs_t* fs, wm_window_t* window, render_t* render, int argc, const char** argv)
@@ -414,6 +440,11 @@ static void update_trucks(frogger_game_t* game)
 {
 	float dt = (float)timer_object_get_delta_ms(game->timer) * 0.002f;
 
+	//Get player for collision detection
+	uint64_t k_query_mask = (1ULL << game->transform_type) | (1ULL << game->player_type);
+	ecs_query_t player_query = ecs_query_create(game->ecs, k_query_mask);
+	transform_component_t* player_transform_comp = ecs_query_get_component(game->ecs, &player_query, game->transform_type);
+
 	uint64_t k_query_mask1 = (1ULL << game->transform_type) | (1ULL << game->truck1_type);
 
 	for (ecs_query_t query = ecs_query_create(game->ecs, k_query_mask1);
@@ -426,6 +457,10 @@ static void update_trucks(frogger_game_t* game)
 
 		if (transform_comp->transform.translation.y > 24.0f) {
 			transform_comp->transform.translation.y *= -1.0f;
+		}
+		if (TestAABBCollision(transform_comp, player_transform_comp)) {
+			ecs_entity_remove(game->ecs, ecs_query_get_entity(game->ecs, &player_query), false);
+			spawn_player(game, 0);
 		}
 	}
 
@@ -442,6 +477,11 @@ static void update_trucks(frogger_game_t* game)
 		if (transform_comp->transform.translation.y > 24.0f) {
 			transform_comp->transform.translation.y *= -1.0f;
 		}
+
+		if (TestAABBCollision(transform_comp, player_transform_comp)) {
+			ecs_entity_remove(game->ecs, ecs_query_get_entity(game->ecs, &player_query), false);
+			spawn_player(game, 0);
+		}
 	}
 
 	uint64_t k_query_mask3 = (1ULL << game->transform_type) | (1ULL << game->truck3_type);
@@ -456,6 +496,11 @@ static void update_trucks(frogger_game_t* game)
 
 		if (transform_comp->transform.translation.y > 24.0f) {
 			transform_comp->transform.translation.y *= -1.0f;
+		}
+
+		if (TestAABBCollision(transform_comp, player_transform_comp)) {
+			ecs_entity_remove(game->ecs, ecs_query_get_entity(game->ecs, &player_query), false);
+			spawn_player(game, 0);
 		}
 	}
 }
