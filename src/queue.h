@@ -1,6 +1,8 @@
 #pragma once
 #include <stdbool.h>
 
+#include <stdbool.h>
+
 // Thread-safe Queue container
 
 // Handle to a thread-safe queue.
