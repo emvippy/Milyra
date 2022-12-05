@@ -5,6 +5,7 @@
 #include "frogger_game.h"
 #include "timer.h"
 #include "wm.h"
+#include "audio.h"
 
 #include "cpp_test.h"
 
@@ -22,6 +23,14 @@ int main(int argc, const char* argv[])
 	wm_window_t* window = wm_create(heap);
 	render_t* render = render_create(heap, window);
 
+	audio_t* audio = audio_init(heap, window);
+	fill_sound_buffer(audio, 0, 0);
+	play_sound_buffer(audio);
+	load_wav_file(audio, heap, fs, "arcade_loop.wav");
+	//win32_update_audio(audio);
+
+	//PlaySound(TEXT("arcade_loop.wav"), NULL, SND_LOOP | SND_ASYNC | SND_FILENAME);
+
 	frogger_game_t* game = frogger_game_create(heap, fs, window, render, argc, argv);
 
 	while (!wm_pump(window))
@@ -31,6 +40,7 @@ int main(int argc, const char* argv[])
 
 	/* XXX: Shutdown render before the game. Render uses game resources. */
 	render_destroy(render);
+	audio_destroy(audio);
 
 	frogger_game_destroy(game);
 

@@ -152,6 +152,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="atomic.c" />
+    <ClCompile Include="audio.c" />
     <ClCompile Include="cpp_test.cpp" />
     <ClCompile Include="debug.c" />
     <ClCompile Include="ecs.c" />
@@ -178,10 +179,12 @@
     <ClCompile Include="tlsf\tlsf.c" />
     <ClCompile Include="trace.c" />
     <ClCompile Include="transform.c" />
+    <ClCompile Include="wav_parse.c" />
     <ClCompile Include="wm.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="atomic.h" />
+    <ClInclude Include="audio.h" />
     <ClInclude Include="cpp_test.h" />
     <ClInclude Include="debug.h" />
     <ClInclude Include="ecs.h" />
@@ -226,6 +229,7 @@
     <ClInclude Include="vulkan\vulkan_xcb.h" />
     <ClInclude Include="vulkan\vulkan_xlib.h" />
     <ClInclude Include="vulkan\vulkan_xlib_xrandr.h" />
+    <ClInclude Include="wav_parse.h" />
     <ClInclude Include="wm.h" />
   </ItemGroup>
   <ItemGroup>
@@ -239,6 +243,12 @@
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">vulkan\glslc.exe -c "%(FullPath)" -o "%(FullPath).spv"</Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">%(FullPath).spv</Outputs>
     </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="Test.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <Media Include="arcade_loop.wav" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

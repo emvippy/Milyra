@@ -1,3 +1,6 @@
+#ifndef _wmh_
+#define _wmh_
+
 #include <stdbool.h>
 #include <stdint.h>
 
@@ -52,3 +55,5 @@ void wm_get_mouse_move(wm_window_t* window, int* x, int* y);
 
 // Get the raw OS window object.
 void* wm_get_raw_window(wm_window_t* window);
+
+#endif
