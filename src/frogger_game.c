@@ -9,6 +9,7 @@
 #include "timer_object.h"
 #include "transform.h"
 #include "wm.h"
+#include "audio.h"
 
 #define _USE_MATH_DEFINES
 #include <math.h>
@@ -52,6 +53,7 @@ typedef struct frogger_game_t
 	fs_t* fs;
 	wm_window_t* window;
 	render_t* render;
+	audio_t* audio;
 
 	timer_object_t* timer;
 
@@ -119,13 +121,14 @@ bool TestAABBCollision(transform_component_t* a, transform_component_t* b)
 	return true;
 }
 
-frogger_game_t* frogger_game_create(heap_t* heap, fs_t* fs, wm_window_t* window, render_t* render, int argc, const char** argv)
+frogger_game_t* frogger_game_create(heap_t* heap, fs_t* fs, wm_window_t* window, render_t* render, audio_t* audio, int argc, const char** argv)
 {
 	frogger_game_t* game = heap_alloc(heap, sizeof(frogger_game_t), 8);
 	game->heap = heap;
 	game->fs = fs;
 	game->window = window;
 	game->render = render;
+	game->audio = audio;
 
 	game->timer = timer_object_create(heap, NULL);
 
@@ -460,6 +463,7 @@ static void update_trucks(frogger_game_t* game)
 		}
 		if (TestAABBCollision(transform_comp, player_transform_comp)) {
 			ecs_entity_remove(game->ecs, ecs_query_get_entity(game->ecs, &player_query), false);
+			play_sound_buffer(game->audio);
 			spawn_player(game, 0);
 		}
 	}
@@ -480,6 +484,7 @@ static void update_trucks(frogger_game_t* game)
 
 		if (TestAABBCollision(transform_comp, player_transform_comp)) {
 			ecs_entity_remove(game->ecs, ecs_query_get_entity(game->ecs, &player_query), false);
+			play_sound_buffer(game->audio);
 			spawn_player(game, 0);
 		}
 	}
@@ -500,6 +505,7 @@ static void update_trucks(frogger_game_t* game)
 
 		if (TestAABBCollision(transform_comp, player_transform_comp)) {
 			ecs_entity_remove(game->ecs, ecs_query_get_entity(game->ecs, &player_query), false);
+			play_sound_buffer(game->audio);
 			spawn_player(game, 0);
 		}
 	}

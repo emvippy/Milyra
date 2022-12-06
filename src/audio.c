@@ -1,3 +1,6 @@
+#pragma comment(lib, "dsound.lib")
+#pragma comment(lib, "dxguid.lib")
+
 #include "audio.h"
 #include "wav_parse.h"
 
@@ -28,9 +31,12 @@ typedef struct audio_t {
 	char* wav_data;
 	WAVFile_t wav_file;
 
+	WAVEFORMATEX wav_format;
+
 	LPDIRECTSOUND direct_sound;
 	LPDIRECTSOUNDBUFFER primary_buffer;
 	LPDIRECTSOUNDBUFFER win32_sound_buffer;
+	LPDIRECTSOUNDBUFFER music_sound_buffer;
 	game_sound_buffer_t sound_buffer;
 } audio_t;
 
@@ -92,6 +98,8 @@ audio_t* audio_init(heap_t* heap, wm_window_t* window) {
 			wave_format.wBitsPerSample = 16;
 			wave_format.nBlockAlign = wave_format.nChannels * wave_format.wBitsPerSample / 8;
 			wave_format.nAvgBytesPerSec = (wave_format.nBlockAlign * wave_format.nSamplesPerSec);
+			wave_format.cbSize = 0;
+			audio->wav_format = wave_format;
 
 			//Create the secondary buffer, filled by fill_sound_buffer
 			DSBUFFERDESC secondary_buffer_desc = { 0 };
@@ -220,6 +228,42 @@ void load_wav_file(audio_t* audio, heap_t* heap, fs_t* fs, const char* file_name
 	audio->work = fs_read(fs, file_name, heap, false, false);
 	audio->wav_data = fs_work_get_buffer(audio->work);
 	audio->wav_file = WAV_ParseFileData(audio->wav_data);
+
+	// Fill in the buffer for the music
+	// Set the buffer description of the music sound buffer for wav file
+	DSBUFFERDESC music_desc = { 0 };
+	music_desc.dwSize = sizeof(DSBUFFERDESC);
+	music_desc.dwFlags = DSBCAPS_CTRLVOLUME;
+	music_desc.dwBufferBytes = audio->wav_file.header.data_size;
+	music_desc.dwReserved = 0;
+	music_desc.lpwfxFormat = &(audio->wav_format);
+	music_desc.guid3DAlgorithm = GUID_NULL;
+
+	// Create the music sound buffer with the specific buffer settings.
+	audio->direct_sound->lpVtbl->CreateSoundBuffer(
+		audio->direct_sound, 
+		&music_desc, 
+		&audio->music_sound_buffer, 
+		NULL);
+
+	// Lock the secondary buffer to write wave data into it.
+	char* char_buffer;
+	DWORD char_bsize;
+	audio->music_sound_buffer->lpVtbl->Lock(audio->music_sound_buffer, 
+											0, 
+											audio->wav_file.header.data_size, 
+											(void**)&char_buffer, 
+											(DWORD*)&char_bsize, 
+											NULL, 
+											0, 
+											0);
+
+	// Copy the wave data into the buffer.
+	memcpy(char_buffer, audio->wav_file.data, audio->wav_file.header.data_size);
+
+	// Unlock the secondary buffer after the data has been written to it.
+	audio->music_sound_buffer->lpVtbl->Unlock(audio->music_sound_buffer, (void*)char_buffer, char_bsize, NULL, 0);
+
 }
 
 void play_sound_buffer(audio_t* audio) {
@@ -227,9 +271,16 @@ void play_sound_buffer(audio_t* audio) {
 	audio->win32_sound_buffer->lpVtbl->Play(audio->win32_sound_buffer, 0, 0, 0); //DSBPLAY_LOOPING for loop
 }
 
+void play_music(audio_t* audio) {
+	audio->music_sound_buffer->lpVtbl->Play(audio->music_sound_buffer, 0, 0, DSBPLAY_LOOPING);
+}
+
 void audio_destroy(audio_t* audio) {
 	//Clear the buffer(s), destroy the work, and free the memory used
 	clear_sound_buffer(audio, 0, 0);
+	audio->win32_sound_buffer->lpVtbl->Release(audio->win32_sound_buffer);
+	audio->music_sound_buffer->lpVtbl->Release(audio->music_sound_buffer);
+	audio->primary_buffer->lpVtbl->Release(audio->primary_buffer);
 	fs_work_destroy(audio->work);
 	heap_free(audio->heap, audio->wav_data);
 	heap_free(audio->heap, audio);

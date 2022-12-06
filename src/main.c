@@ -25,13 +25,11 @@ int main(int argc, const char* argv[])
 
 	audio_t* audio = audio_init(heap, window);
 	fill_sound_buffer(audio, 0, 0);
-	play_sound_buffer(audio);
+	//play_sound_buffer(audio);
 	load_wav_file(audio, heap, fs, "arcade_loop.wav");
-	//win32_update_audio(audio);
+	play_music(audio);
 
-	//PlaySound(TEXT("arcade_loop.wav"), NULL, SND_LOOP | SND_ASYNC | SND_FILENAME);
-
-	frogger_game_t* game = frogger_game_create(heap, fs, window, render, argc, argv);
+	frogger_game_t* game = frogger_game_create(heap, fs, window, render, audio, argc, argv);
 
 	while (!wm_pump(window))
 	{
