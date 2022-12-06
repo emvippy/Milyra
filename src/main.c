@@ -23,9 +23,9 @@ int main(int argc, const char* argv[])
 	wm_window_t* window = wm_create(heap);
 	render_t* render = render_create(heap, window);
 
+	// Init, fill, and load audio; start playing music
 	audio_t* audio = audio_init(heap, window);
 	fill_sound_buffer(audio, 0, 0);
-	//play_sound_buffer(audio);
 	load_wav_file(audio, heap, fs, "arcade_loop.wav");
 	play_music(audio);
 

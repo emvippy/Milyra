@@ -35,7 +35,7 @@ typedef struct audio_t {
 
 	LPDIRECTSOUND direct_sound;
 	LPDIRECTSOUNDBUFFER primary_buffer;
-	LPDIRECTSOUNDBUFFER win32_sound_buffer;
+	LPDIRECTSOUNDBUFFER fx_sound_buffer;
 	LPDIRECTSOUNDBUFFER music_sound_buffer;
 	game_sound_buffer_t sound_buffer;
 } audio_t;
@@ -113,7 +113,7 @@ audio_t* audio_init(heap_t* heap, wm_window_t* window) {
 				&secondary_buffer_desc,
 				&win32sbuff,
 				0);
-			audio->win32_sound_buffer = win32sbuff;
+			audio->fx_sound_buffer = win32sbuff;
 		}
 	}
 	return audio;
@@ -124,7 +124,7 @@ void fill_sound_buffer(audio_t* audio, DWORD byte_lock, DWORD byte_write) {
 	void* region_1;
 	void* region_2;
 	DWORD region_1_size, region_2_size;
-	audio->win32_sound_buffer->lpVtbl->Lock(audio->win32_sound_buffer,
+	audio->fx_sound_buffer->lpVtbl->Lock(audio->fx_sound_buffer,
 											0,
 											audio->sound_buffer.size,
 											&region_1,
@@ -174,15 +174,11 @@ void fill_sound_buffer(audio_t* audio, DWORD byte_lock, DWORD byte_write) {
 		}
 	}
 	// Unlock the buffer when finished
-	audio->win32_sound_buffer->lpVtbl->Unlock(audio->win32_sound_buffer,
+	audio->fx_sound_buffer->lpVtbl->Unlock(audio->fx_sound_buffer,
 		region_1,
 		region_1_size,
 		region_2,
 		region_2_size);
-}
-
-void update_game_sound(audio_t* audio) {
-
 }
 
 void clear_sound_buffer(audio_t* audio, DWORD byte_lock, DWORD byte_write) {
@@ -190,7 +186,7 @@ void clear_sound_buffer(audio_t* audio, DWORD byte_lock, DWORD byte_write) {
 	void* region_1;
 	void* region_2;
 	DWORD region_1_size, region_2_size;
-	audio->win32_sound_buffer->lpVtbl->Lock(audio->win32_sound_buffer,
+	audio->fx_sound_buffer->lpVtbl->Lock(audio->fx_sound_buffer,
 											0,
 											audio->sound_buffer.size,
 											&region_1,
@@ -216,7 +212,7 @@ void clear_sound_buffer(audio_t* audio, DWORD byte_lock, DWORD byte_write) {
 
 	}
 	// Unlock the buffer when finished
-	audio->win32_sound_buffer->lpVtbl->Unlock(audio->win32_sound_buffer, 
+	audio->fx_sound_buffer->lpVtbl->Unlock(audio->fx_sound_buffer, 
 											region_1, 
 											region_1_size, 
 											region_2, 
@@ -268,7 +264,7 @@ void load_wav_file(audio_t* audio, heap_t* heap, fs_t* fs, const char* file_name
 
 void play_sound_buffer(audio_t* audio) {
 	// Use the buffer function to play the sound stored in the buffer
-	audio->win32_sound_buffer->lpVtbl->Play(audio->win32_sound_buffer, 0, 0, 0); //DSBPLAY_LOOPING for loop
+	audio->fx_sound_buffer->lpVtbl->Play(audio->fx_sound_buffer, 0, 0, 0); //DSBPLAY_LOOPING for loop
 }
 
 void play_music(audio_t* audio) {
@@ -278,7 +274,7 @@ void play_music(audio_t* audio) {
 void audio_destroy(audio_t* audio) {
 	//Clear the buffer(s), destroy the work, and free the memory used
 	clear_sound_buffer(audio, 0, 0);
-	audio->win32_sound_buffer->lpVtbl->Release(audio->win32_sound_buffer);
+	audio->fx_sound_buffer->lpVtbl->Release(audio->fx_sound_buffer);
 	audio->music_sound_buffer->lpVtbl->Release(audio->music_sound_buffer);
 	audio->primary_buffer->lpVtbl->Release(audio->primary_buffer);
 	fs_work_destroy(audio->work);
